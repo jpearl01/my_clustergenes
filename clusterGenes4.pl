@@ -405,6 +405,11 @@ sub load_tfasty
 		  die "Percent identity isn't defined at $.\n" unless $percent_identity;
 		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
 		  die "There was a problem with the match_data element, percent_identity or alignment_length has no match. Line $. \n@match_data\n" unless ($percent_identity && $alignment_length);
+
+		  #Add filtering of the minimum length
+		  if ($alignmnent_length < $MIN_CLUSTER_LENGTH){
+		      next MATCH;
+		  }
 		  
 		  die "Gene name matching problem at line $. in tfasty which is:\n$line_input\n(Fasta)" unless ( $gene2_name && $gene1_name && ($gene2_name ne '') && ($gene1_name ne ''));
 		  #if ($percent_identity && $alignment_length && $gene1_name && $gene2_name) {print STDERR "Gene name is $gene1_name matching gene is $gene2_name percent identity is $percent_identity and align len is $alignment_length\n"}
@@ -485,6 +490,11 @@ sub load_fasta
 		  die "Percent identity isn't defined at $.\n" unless $percent_identity;
 		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
 		  
+		  #Add filtering of the minimum length
+		  if ($alignmnent_length < $MIN_CLUSTER_LENGTH){
+		      next MATCH;
+		  }
+
 		  if (!(defined $gene_name && defined $match_strain)){print STDERR "Gene name matching problem at line $. in fasta which is:\n$line_input\n";}
 		  #if ($percent_identity && $alignment_length && $gene_name && $match_strain) {print STDERR "Gene name is $gene_name match strain is $match_strain percent identity is $percent_identity and align len is $alignment_length\n"}
 		  

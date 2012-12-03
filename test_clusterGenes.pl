@@ -1,11 +1,11 @@
 #!/usr/bin/perl
 #
 # USAGE:
-# clusterGenes.perl all_fasta_sequences tfasty_output fasta_output min_amino_iden min_nuc_iden align_ratio > clusters
+# clusterGenes4.pl all_fasta_sequences tfasty_output fasta_output min_amino_iden min_nuc_iden align_ratio > clusters
 #
 # AUTHOR: justin.s.hogg
 # CREATED: 25 april 2006
-# UPDATED: 20 june 2011
+# UPDATED: 3 Feb 2012
 # UPDATED BY: Josh Earl
 #
 # set tab-stops to 3 spaces!
@@ -14,7 +14,7 @@ use strict;
 use warnings;
 use SequenceList;
 use Sequence;
-
+use Data::Dumper::Perltidy;
 
 
 # This program has three inputs:
@@ -55,7 +55,7 @@ use Sequence;
 
 
 
-open FILE, "strain_list" or die "Could not open filename: $!\n";
+open FILE, "strain_list" or die "Could not open strain_list: $!\n";
 my @strain_ar=<FILE>;
 # cluster naming scheme
 our $STRAIN_PRIORITY_1 = $strain_ar[0];
@@ -127,7 +127,6 @@ print STDERR "${step}: loading sequences..\n";  $step++;
 our $ALL_SEQUENCES = SequenceList->loadFasta( $sequence_file );
 my @names = $ALL_SEQUENCES->getNames;
 my $num_names = @names;
-print STDERR "The number of names from the fasta file $sequence_file: $num_names\n";
 for my $g (@names){
 	my @a = split("_", $g);
 	if (!exists $strain_hash{$a[0]}){
@@ -135,8 +134,6 @@ for my $g (@names){
 		#print STDERR $a[0]."\n";
 	}
 }
-$num_names = $ALL_SEQUENCES->getNames;
-die "The number of sequences in ALL_SEQUENCES: $num_names\n";
 #die;
 
 #My ignore list
@@ -188,7 +185,8 @@ foreach my $gene_pair ( @$GENE_PAIR_MATCHES )
 	my ($gene1_ref, $gene2_ref) = $ALL_SEQUENCES->getRefs( $gene1_match, $gene2_match );
 
    # check if seq1 and seq 2 are already part of a cluster(s).
-	#print $gene1_match."\t".$gene2_match."\n";
+	print STDERR "The gene $gene1_match did not get defined in the CLUSTER_INDEX.\n" unless exists $CLUSTER_INDEX{$gene1_ref};
+	print STDERR "The gene $gene2_match did not get defined in the CLUSTER_INDEX.\n" unless exists $CLUSTER_INDEX{$gene2_ref};
 	#print "Keys in cluster_index: ".(keys %CLUSTER_INDEX)."\n";
 	my $cluster1_ref = $CLUSTER_INDEX{$gene1_ref};
 	my $cluster2_ref = $CLUSTER_INDEX{$gene2_ref};
@@ -353,61 +351,75 @@ sub load_tfasty
 	open TFASTY, "<", $tfasty_file  or  die "ERROR: could not open tfasty file $tfasty_file!\n";
 	BEGIN_REC: while ( my $line_input = <TFASTY> )
 	{
-		# look for the beginning of a record
-		if ( $line_input =~ /^\s*\d+>>>/ )
-		{
-			# we found a record.  get strain and locus.
+	    
+	    # look for the beginning of a record
+	    if ( $line_input =~ /^\s*\d+>>>/ )
+	    {
+		# we found a record.  replace the contig number if it exists, as we just want the strain name included here.
 		
-			my ($gene1_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Couldn't parse out the gene name from line: $. which was: $line_input\n(tfasty";
-			my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+\.?\d?)\s+-\s+(\d+) aa/ or die "Couldn't parse out strain/locus/length from line: $. which was: $line_input\n(tfasty)"; 
-			if (!(exists $strain_hash{$strain})){
-				#print STDERR "strain $strain doesn't exist in our list, next record\n";
-				next BEGIN_REC;
-			}
+		$line_input =~ s/ctg\d+_/_/i;
 
-			# search for the start of the matches
-			while ( $line_input = <TFASTY> )
-			{
-				last if ($line_input =~ /^The best scores are:/);
-			}
-
-			# gather matches until a blank line is encountered
-			MATCH: while ( $line_input = <TFASTY> ) 
-			{
-				last if ( $line_input =~ /^>>><<</ );
-				last if ( $line_input =~ /^\n/ );
-				next if ( $line_input =~ /^\+-/ );				
-				chomp $line_input;
-
-				my ($header,$data) = split( /\t/, $line_input ) or die "Can't get header and data from $line_input at $. : $!\n(Fasta)";
-				die "The tab split between the header and the data failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($header && $data) ;
-				my ($gene2_name) = $header =~ /^([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from  $line_input at $. :$!\n(Fasta)";
-				die "The gene2_name failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($gene2_name) ;
-				my ($match_strain, $match_locus) = $header =~ /^([A-Za-z0-9]+)_(\d+\.?\d?)/ or die "Can't parse the line $line_input at $. :$!\n(Fasta)";
-				die "The strain and locus match failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($match_strain && $match_locus) ;
-
-				if (!(exists $strain_hash{$match_strain})){
-					#print STDERR "Gene $gene2_name (from $header) doesn't exist in our list, next record\n";
-					next MATCH;
-				}
-				my @match_data = split( /\s+/, $data );
-
-				my $percent_identity = $match_data[0];
-				my $alignment_length = $match_data[3];
-				die "There was a problem with the match_data element, percent_identity or alignment_length has no match. Line $. \n@match_data\n" unless ($percent_identity && $alignment_length);
-				
-				die "Gene name matching problem at line $. in tfasty which is:\n$line_input\n(Fasta)" unless ( $gene2_name && $gene1_name && $gene2_name ne '' && $gene1_name ne '');
-
-				if ( $percent_identity >= $MIN_AMINO_IDENTITY
-						and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
-				{
-					# save the match
-					push @$gene_pair_matches, [$gene1_name, $gene2_name];
-				}
-			}
-
-			# we're at the end of the record, start looking for the next record	
+		my ($gene1_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Couldn't parse out the gene name from line: $. which was: $line_input\n(tfasty";
+		my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+)[^-]*.*-\s+(\d+) aa$/ or die "Couldn't parse out strain/locus/length from line: $. which was: $line_input\n(tfasty)"; 
+		if (!(exists $strain_hash{$strain})){
+		    #print STDERR "strain $strain doesn't exist in our list, next record\n";
+		    next BEGIN_REC;
 		}
+		if ($line_input =~ />>>([A-Za-z0-9]+)_(\d+) Contig/){
+		    next BEGIN_REC;
+		}
+		
+		# search for the start of the matches
+		while ( $line_input = <TFASTY> )
+		{
+		    last if ($line_input =~ /^The best scores are:/);
+		}
+		
+		# gather matches until a blank line is encountered
+	      MATCH: while ( $line_input = <TFASTY> ) 
+	      {
+		  last if ( $line_input =~ /^>>><<</ );
+		  last if ( $line_input =~ /^\n/ );
+		  last if ( $line_input =~ /^\s*\n/ );
+		  next if ( $line_input =~ /^\+-/ );				
+		  chomp $line_input;
+
+		  #Replace the contig number if it exists, as we just want the strain name included here.
+		  $line_input =~ s/ctg\d+_/_/i;		  
+
+		  my ($header,$data) = split( /\t/, $line_input ) or die "Can't get header and data from $line_input at $. : $!\n(Fasta)";
+		  die "The tab split between the header and the data failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($header && $data) ;
+		  my ($gene2_name) = $header =~ /^([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from  $line_input at $. :$!\n(Fasta)";
+		  die "The gene2_name failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($gene2_name) ;
+		  my ($match_strain, $match_locus) = $header =~ /^([A-Za-z0-9]+)_(\d+\.?\d?)/ or die "Can't parse the line $line_input at $. :$!\n(Fasta)";
+		  die "The strain and locus match failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($match_strain && $match_locus) ;
+		  
+		  if (!(exists $strain_hash{$match_strain})){
+		      print STDERR "From the tfasty file $gene2_name (in line $. which is: $header) doesn't match to a strain in strain_list, next record\n";
+		      next MATCH;
+		  }
+		  my @match_data = split( /\s+/, $data );
+		  
+		  my $percent_identity = $match_data[0];
+		  my $alignment_length = $match_data[3];
+		  die "Percent identity isn't defined at $.\n" unless $percent_identity;
+		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
+		  die "There was a problem with the match_data element, percent_identity or alignment_length has no match. Line $. \n@match_data\n" unless ($percent_identity && $alignment_length);
+		  
+		  die "Gene name matching problem at line $. in tfasty which is:\n$line_input\n(Fasta)" unless ( $gene2_name && $gene1_name && ($gene2_name ne '') && ($gene1_name ne ''));
+		  #if ($percent_identity && $alignment_length && $gene1_name && $gene2_name) {print STDERR "Gene name is $gene1_name matching gene is $gene2_name percent identity is $percent_identity and align len is $alignment_length\n"}
+		  
+		  if ( $percent_identity >= $MIN_AMINO_IDENTITY
+		       and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
+		  {
+		      # save the match
+		      push @$gene_pair_matches, [$gene1_name, $gene2_name];
+		      #print "Protein match: $gene1_name to $gene2_name\n";
+		  }
+	      }
+		
+		# we're at the end of the record, start looking for the next record	
+	    }
 	}
 	close TFASTY;
 	return;
@@ -427,56 +439,64 @@ sub load_fasta
 	open FASTA, "<", $fasta_file  or  die "ERROR: could not open fasta file $fasta_file!\n";
 	BEGIN_REC: while ( my $line_input = <FASTA> )
 	{
-		# look for the beginning of a record
-		if ( $line_input =~ /^\s*\d+>>>/ )
-		{
-			# we found a record.  get strain and locus.
-
-		    my ($gene_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from line: $line_input at $. :$!\n (fasta)";
-			my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+\.?\d?)\s+-\s+(\d+) nt/ or die "Can't parse strain/locus/length from line $line_input at $. :$!\n(fasta)"; 
-			if (!(exists $strain_hash{$strain})){
-				#print STDERR "strain $strain doesn't exist in our list, next record\n";
-				next BEGIN_REC;
-			}
-
-			# search for the start of the matches
-			while ( $line_input = <FASTA> )
-			{
-				last if ($line_input =~ /^The best scores are:/);
-			}
-
-			# gather matches until a blank line is encountered
-			MATCH: while ( $line_input = <FASTA> ) 
-			{
-				last if ( $line_input =~ /^>>><<</ );
-				last if ( $line_input =~ /^\n/ );
-				next if ( $line_input =~ /^\+-/ );
-				chomp $line_input;
-
-				my ($header,$data) = split( /\t/, $line_input )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";				
-				my ($match_strain) = $header =~ /^([A-Za-z0-9]+)/ or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";
-				if (!(exists $strain_hash{$match_strain})){
-					#print STDERR "strain $strain doesn't exist in our list, next record\n";
-					next MATCH;
-				}
-
-				my @match_data = split( /\s+/, $data )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";;
-
-				my $percent_identity = $match_data[0];
-				my $alignment_length = $match_data[3];
-
-				if (!(defined $gene_name && defined $match_strain)){print STDERR "Gene name matching problem at line $. in fasta which is:\n$line_input\n";}
-
-
-				if ( $percent_identity >= $MIN_NUCLEO_IDENTITY
-						and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
-				{
-					# save the match
-					push @$gene_to_genome_matches, [$gene_name, $match_strain];
-				}
-			}
-			# we're at the end of the record, start looking for the next record	
+	    # look for the beginning of a record
+	    if ( $line_input =~ /^\s*\d+>>>/ )
+	    {
+		# we found a record.  get strain and locus. Replace the contig number if it exists, as we just want the strain name included here.
+		
+		$line_input =~ s/ctg\d+_/_/i;
+		
+		my ($gene_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from line: $line_input at $. :$!\n (fasta)";
+		my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+).*\s+-\s+(\d+) nt/ or die "Can't parse strain/locus/length from line $line_input at $. :$!\n(fasta)"; 
+		if (!(exists $strain_hash{$strain})){
+		    #print STDERR "strain $strain doesn't exist in our list, next record\n";
+		    next BEGIN_REC;
 		}
+		
+		# search for the start of the matches
+		while ( $line_input = <FASTA> )
+		{
+		    last if ($line_input =~ /^The best scores are:/);
+		}
+		
+		# gather matches until a blank line is encountered
+	      MATCH: while ( $line_input = <FASTA> ) 
+	      {
+		  last if ( $line_input =~ /^>>><<</ );
+		  last if ( $line_input =~ /^\n/ );
+		  next if ( $line_input =~ /^\+-/ );
+		  chomp $line_input;
+		  
+		  #Replace the contig number if it exists, as we just want the strain name included here.
+		  $line_input =~ s/ctg\d+_/_/i;
+		  
+		  my ($header,$data) = split( /\t/, $line_input )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";				
+		  my ($match_strain) = $header =~ /^([A-Za-z0-9]+)/ or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";
+		  if (!(exists $strain_hash{$match_strain})){
+		      #print STDERR "strain $strain doesn't exist in our list, next record\n";
+		      next MATCH;
+		  }
+		  
+		  my @match_data = split( /\s+/, $data )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";;
+		  
+		  my $percent_identity = $match_data[0];
+		  my $alignment_length = $match_data[3];
+		  
+		  die "Percent identity isn't defined at $.\n" unless $percent_identity;
+		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
+		  
+		  if (!(defined $gene_name && defined $match_strain)){print STDERR "Gene name matching problem at line $. in fasta which is:\n$line_input\n";}
+		  #if ($percent_identity && $alignment_length && $gene_name && $match_strain) {print STDERR "Gene name is $gene_name match strain is $match_strain percent identity is $percent_identity and align len is $alignment_length\n"}
+		  
+		  if ( $percent_identity >= $MIN_NUCLEO_IDENTITY
+		       and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
+		  {
+		      # save the match
+		      push @$gene_to_genome_matches, [$gene_name, $match_strain];
+		  }
+	      }
+		# we're at the end of the record, start looking for the next record	
+	    }
 	}
 	close FASTA;
 	return;
@@ -525,6 +545,7 @@ sub add_gene_to_cluster
 	
 		# add strain
 		my ($strain) = $gene_ref->name =~ /^([A-Za-z0-9]+)_/;
+		print "$strain\n" unless exists $cluster_ref->{strains}->{$strain};
 		$cluster_ref->{strains}->{$strain} = 1;
 
 		# update CLUSTER_INDEX
@@ -713,6 +734,13 @@ sub filter_short_clusters
 
 	my ($align_obj) = $cluster_ref->{alignments}->getAllRefs;
 	return(undef) unless ( defined $align_obj );
+
+	print STDERR "The short cluster filtering function is being called\n";
+	print "Size of align is: ";
+	print $align_obj->len;
+	print "\n";
+	print Dumper $align_obj;
+
 
 	if ( $align_obj->len < $MIN_CLUSTER_LENGTH )
 	{
