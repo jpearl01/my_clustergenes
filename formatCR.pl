@@ -12,6 +12,8 @@ use Data::Dumper;
 #
 # perl formatCR.pl clusterGenes report_output
 
+die "Needs two inputs, Usage: perl formatCR.pl clusterGenes report_output\n" unless ($ARGV[0]  && $ARGV[1] ) ;
+
 open CR, $ARGV[0] or die "clusterGenes did not successfully open: $!";
 open RO, $ARGV[1] or die "report_output did not successfully open: $!";
 open MCR, '>MyClusterReport' or die "Couldn't make MyClusterReport: $!";

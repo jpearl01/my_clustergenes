@@ -15,6 +15,9 @@ use Data::Dumper;
 #CoreGeneList
 #This file is used in the JANG.pl program to produce the distance matrix used for tree building
 ######################################
+
+die "We need two arguments.  Usage: perl iniJang.pl clusterGenes report_output\n" unless ($ARGV[0] && $ARGV[1]);
+
 open CR, $ARGV[0] or die "clusterGenes did not successfully open: $!";
 open RO, $ARGV[1] or die "report_output did not successfully open: $!";
 open MCR, '>CoreGeneList' or die "Couldn't make CoreGeneList: $!";

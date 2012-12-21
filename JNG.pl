@@ -176,18 +176,18 @@ foreach my $g1 (keys (%hashOfGenomes)){
 ###########################
 my $mst = $graph->MST_Kruskal();
 my $graphVizMst = GraphViz->new(
-								node 		=>	{
-												shape	=> 	'box',
-												color	=>	'red'
-												},
-								layout 		=> 'neato',
-								directed	=> 0,
-								width 		=> 20,
-								height 		=> 15,
-                        		pagewidth 	=> 22,
-                        		pageheight 	=> 17,
-                        		overlap		=>'scale'
-                        		);
+    node 		=>	{
+	shape	=> 	'box',
+	color	=>	'red'
+    },
+    layout 		=> 'neato',
+    directed	=> 0,
+    width 		=> 20,
+    height 		=> 15,
+    pagewidth 	=> 22,
+    pageheight 	=> 17,
+    overlap		=>'scale'
+    );
 my $lab;
 my $lab2;
 #Open csv for the java graph program, convert $mst to the graphviz object

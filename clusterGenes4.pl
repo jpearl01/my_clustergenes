@@ -14,6 +14,7 @@ use strict;
 use warnings;
 use SequenceList;
 use Sequence;
+use Data::Dumper::Perltidy;
 
 
 
@@ -256,7 +257,6 @@ foreach my $cluster_ref ( @CLUSTERS )
 
 
 
-
 # generate alignments, filter short clusters, split bad clusters
 if ( $GENERATE_ALIGNMENTS )
 {
@@ -361,6 +361,9 @@ sub load_tfasty
 
 		my ($gene1_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Couldn't parse out the gene name from line: $. which was: $line_input\n(tfasty";
 		my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+)[^-]*.*-\s+(\d+) aa$/ or die "Couldn't parse out strain/locus/length from line: $. which was: $line_input\n(tfasty)"; 
+#		if ($length < $MIN_CLUSTER_LENGTH){
+#		    next BEGIN_REC;		    
+#		}
 		if (!(exists $strain_hash{$strain})){
 		    #print STDERR "strain $strain doesn't exist in our list, next record\n";
 		    next BEGIN_REC;
@@ -389,7 +392,7 @@ sub load_tfasty
 
 		  my ($header,$data) = split( /\t/, $line_input ) or die "Can't get header and data from $line_input at $. : $!\n(Fasta)";
 		  die "The tab split between the header and the data failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($header && $data) ;
-		  my ($gene2_name) = $header =~ /^([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from  $line_input at $. :$!\n(Fasta)";
+		  my ($gene2_name, $qlen) = $header =~ /^([A-Za-z0-9]+_\d+).+\(\s*(\d+)\s*\)/ or die "Can't parse the query gene or length from  $line_input at $. :$!\n(Fasta)";
 		  die "The gene2_name failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($gene2_name) ;
 		  my ($match_strain, $match_locus) = $header =~ /^([A-Za-z0-9]+)_(\d+\.?\d?)/ or die "Can't parse the line $line_input at $. :$!\n(Fasta)";
 		  die "The strain and locus match failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($match_strain && $match_locus) ;
@@ -406,10 +409,11 @@ sub load_tfasty
 		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
 		  die "There was a problem with the match_data element, percent_identity or alignment_length has no match. Line $. \n@match_data\n" unless ($percent_identity && $alignment_length);
 
-		  #Add filtering of the minimum length
-		  if ($alignmnent_length < $MIN_CLUSTER_LENGTH){
-		      next MATCH;
-		  }
+                  #Add filtering of the minimum length
+#                  if ($qlen < $MIN_CLUSTER_LENGTH*3){
+#                      next MATCH;
+#                  }
+
 		  
 		  die "Gene name matching problem at line $. in tfasty which is:\n$line_input\n(Fasta)" unless ( $gene2_name && $gene1_name && ($gene2_name ne '') && ($gene1_name ne ''));
 		  #if ($percent_identity && $alignment_length && $gene1_name && $gene2_name) {print STDERR "Gene name is $gene1_name matching gene is $gene2_name percent identity is $percent_identity and align len is $alignment_length\n"}
@@ -451,8 +455,13 @@ sub load_fasta
 		
 		$line_input =~ s/ctg\d+_/_/i;
 		
-		my ($gene_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or die "Can't parse the gene name from line: $line_input at $. :$!\n (fasta)";
+		my ($gene_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/ or warn "Can't parse the gene name from line: $line_input at $. :$!\n (fasta)";
+		next BEGIN_REC unless $gene_name;
 		my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+).*\s+-\s+(\d+) nt/ or die "Can't parse strain/locus/length from line $line_input at $. :$!\n(fasta)"; 
+#		if ($length < $MIN_CLUSTER_LENGTH*3){
+#		    next BEGIN_REC;		    
+#		}
+
 		if (!(exists $strain_hash{$strain})){
 		    #print STDERR "strain $strain doesn't exist in our list, next record\n";
 		    next BEGIN_REC;
@@ -489,11 +498,11 @@ sub load_fasta
 		  
 		  die "Percent identity isn't defined at $.\n" unless $percent_identity;
 		  die "Alignment length isn't defined at $.\n" unless $alignment_length;
-		  
-		  #Add filtering of the minimum length
-		  if ($alignmnent_length < $MIN_CLUSTER_LENGTH){
-		      next MATCH;
-		  }
+
+                  #Add filtering of the minimum length
+#                  if ($alignment_length < ($MIN_CLUSTER_LENGTH*3)){
+#                      next MATCH;
+#                  }
 
 		  if (!(defined $gene_name && defined $match_strain)){print STDERR "Gene name matching problem at line $. in fasta which is:\n$line_input\n";}
 		  #if ($percent_identity && $alignment_length && $gene_name && $match_strain) {print STDERR "Gene name is $gene_name match strain is $match_strain percent identity is $percent_identity and align len is $alignment_length\n"}

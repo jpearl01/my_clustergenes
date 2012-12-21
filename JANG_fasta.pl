@@ -41,6 +41,8 @@ my $graph = Graph::Undirected->new;
 open MS, '>', 'MissingSequence.log' or die "Couldn't open the missing sequence logfile :$!";
 open W, '>', 'warnings.log' or die "Couldn't open the warnings.log file: $!"; 
 
+die "We need three inputs, USAGE: perl JANG_fasta.pl CoreGeneList all-against-all.fasta36 integer_value_of_strains\n" unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
+
 #Check if Args are initialized (command line)
 if (defined $ARGV[0]){
 	$cl = $ARGV[0];
@@ -160,7 +162,7 @@ sub load_fasta{
 			# we found a record.  get strain and locus.
 			my ($gene1_name) = $line_input =~ />>>([A-Za-z0-9]+_\d+)/;
 			my ($strain, $locus, $length) = $line_input =~ />>>([A-Za-z0-9]+)_(\d+).*\s+-\s+(\d+) nt/; 
-			
+			die "Problem parsing the strain, locus, or length from the beginning record on line $.\n" unless ($strain && $locus && $length);
 
 			#added this to account for times we don't want to only examine a subset.
 			if (!(exists $strain_hash{$strain})){
@@ -185,9 +187,12 @@ sub load_fasta{
 				my ($header,$data) = split( /\t/, $line_input );
 				die "Something wrong with the pattern match, trying to split on a tab on line $. :\n$line_input\n" unless ($header && $data);
 				my ($gene2_name) = $header =~ /^([A-Za-z0-9]+)/;
+				#print "The gene match name it is printing is $gene2_name\n";
 				die "Something wrong with the pattern match, trying to get beginning gene name on line $. :\n$line_input\n" unless ($gene2_name);
-				my ($match_strain, $match_locus) = $header =~ /^([A-Za-z0-9]+)[ctg0-9]*_*(.+)/;
-				die "Something wrong with the pattern match, trying to get strain and locus on line $. :\n$line_input\n" unless ($match_strain && $match_locus);
+				my ($match_strain) = $header =~ /^([A-Za-z0-9]+)/i;
+				#now, trim off the contig ends, if there
+				$match_strain =~ s/ctg\d+//i;
+				die "Something wrong with the pattern match, trying to get strain and locus on line $. :\n$line_input\n" unless ($match_strain);
 
 				#Again, added this to take care of pesky fasta alignment files, when we only want to look at a subset.
 				#print $line_input."\n";
@@ -208,13 +213,13 @@ sub load_fasta{
 				#exist in the same contig, then the highest scoring one is taken.  If in different
 				#contigs they will be averaged in with the rest.
 				
-				if (!exists $identity{$gene2_name}->{$gene1_name}){
-					$identity{$gene2_name}->{$gene1_name} = $percent_identity;
+				if (!exists $identity{$match_strain}->{$gene1_name}){
+					$identity{$match_strain}->{$gene1_name} = $percent_identity;
 				}
 				else{
-					if ($identity{$gene2_name}->{$gene1_name}<$percent_identity){
-						print W "Identity already exists between $gene1_name and $gene2_name, which is $identity{$gene2_name}->{$gene1_name}.  New identity is $percent_identity\n";
-						$identity{$gene2_name}->{$gene1_name} = $percent_identity;
+					if ($identity{$match_strain}->{$gene1_name}<$percent_identity){
+						print W "Identity already exists between $gene1_name and $match_strain, which is $identity{$match_strain}->{$gene1_name}.  New identity is $percent_identity\n";
+						$identity{$match_strain}->{$gene1_name} = $percent_identity;
 					}
 				}
 			}
