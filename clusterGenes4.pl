@@ -68,7 +68,7 @@ close FILE;
 
 #Added by Josh, the functionality to read in a strain list from a file (woot)
 open (STRAIN, "strain_list") or die "can't open strain_list file:$!\n";
-our @STRAIN_LIST ="";
+our @STRAIN_LIST;
 our %strain_hash;
 
 while (<STRAIN>)
@@ -78,8 +78,6 @@ while (<STRAIN>)
 	$strain_hash{$_}=1;
 }
 close STRAIN;
-
-# no longer needed to list the strain names here:
 
 # alignment options
 our $GENERATE_ALIGNMENTS = 0;                
@@ -691,7 +689,6 @@ sub name_cluster
 	{
 		my $gene_name = $gene_ref->name;
 		my ($strain) = $gene_name =~ /^([A-Za-z0-9]+)_/;
-
 		#Added by josh, previously if there were less than 4 genomes in the project, this naming scheme would error
 		#this next code assigns the first gene name as the cluster if there are less than 4 genomes.
 		if (@STRAIN_LIST < 4) {
