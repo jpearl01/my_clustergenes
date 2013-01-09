@@ -398,7 +398,7 @@ sub load_tfasty
 		  die "The strain and locus match failed its regex:$!\n On line $. \nwhich is: $line_input\n" unless ($match_strain && $match_locus) ;
 		  
 		  if (!(exists $strain_hash{$match_strain})){
-		      print STDERR "From the tfasty file $gene2_name (in line $. which is: $header) doesn't match to a strain in strain_list, next record\n";
+#		      print STDERR "From the tfasty file $gene2_name (in line $. which is: $header) doesn't match to a strain in strain_list, next record\n";
 		      next MATCH;
 		  }
 		  my @match_data = split( /\s+/, $data );
@@ -413,10 +413,8 @@ sub load_tfasty
 #                  if ($qlen < $MIN_CLUSTER_LENGTH*3){
 #                      next MATCH;
 #                  }
-
 		  
 		  die "Gene name matching problem at line $. in tfasty which is:\n$line_input\n(Fasta)" unless ( $gene2_name && $gene1_name && ($gene2_name ne '') && ($gene1_name ne ''));
-		  #if ($percent_identity && $alignment_length && $gene1_name && $gene2_name) {print STDERR "Gene name is $gene1_name matching gene is $gene2_name percent identity is $percent_identity and align len is $alignment_length\n"}
 		  
 		  if ( $percent_identity >= $MIN_AMINO_IDENTITY
 		       and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
