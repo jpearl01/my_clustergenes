@@ -65,17 +65,19 @@ our $STRAIN_PRIORITY_3 = $strain_ar[2];
 our $STRAIN_PRIORITY_4 = $strain_ar[3];
 close FILE;
 
-
-#Added by Josh, the functionality to read in a strain list from a file (woot)
-open (STRAIN, "strain_list") or die "can't open strain_list file:$!\n";
 our @STRAIN_LIST;
 our %strain_hash;
 
+#Added by Josh, the functionality to read in a strain list from a file (woot)
+open STRAIN, "strain_list" or die "can't open strain_list file:$!\n";
+
+my $line;
 while (<STRAIN>)
 {
 	chomp $_;
-	push(@STRAIN_LIST, $_);
-	$strain_hash{$_}=1;
+	$line = $_;
+	push(@STRAIN_LIST, $line);
+	$strain_hash{$line}=1;
 }
 close STRAIN;
 
@@ -130,10 +132,8 @@ for my $g (@names){
 	my @a = split("_", $g);
 	if (!exists $strain_hash{$a[0]}){
 		$ALL_SEQUENCES->deleteSequence($g);
-		#print STDERR $a[0]."\n";
 	}
 }
-#die;
 
 #My ignore list
 #my %ignore;
@@ -154,7 +154,6 @@ load_tfasty( $tfasty_file, $GENE_PAIR_MATCHES );
 # load fasta matches
 print STDERR "${step}: loading fasta matches..\n";  $step++;
 load_fasta( $fasta_file, $GENE_TO_GENOME_MATCHES );
-
 # initialize clustering data structures
 our @CLUSTERS = ();
 our %CLUSTER_INDEX = ();
@@ -478,7 +477,7 @@ sub load_fasta
 		  chomp $line_input;
 		  
 		  #Replace the contig number if it exists, as we just want the strain name included here.
-		  $line_input =~ s/ctg\d+_/_/i;
+		  $line_input =~ s/ctg\d+//i;
 		  
 		  my ($header,$data) = split( /\t/, $line_input )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";				
 		  my ($match_strain) = $header =~ /^([A-Za-z0-9]+)/ or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";
@@ -486,7 +485,7 @@ sub load_fasta
 		      #print STDERR "strain $strain doesn't exist in our list, next record\n";
 		      next MATCH;
 		  }
-		  
+
 		  my @match_data = split( /\s+/, $data )or die "Match for the strain name failed on line $.\n line: $line_input\nReason: $!\n";;
 		  
 		  my $percent_identity = $match_data[0];
@@ -502,7 +501,6 @@ sub load_fasta
 
 		  if (!(defined $gene_name && defined $match_strain)){print STDERR "Gene name matching problem at line $. in fasta which is:\n$line_input\n";}
 		  #if ($percent_identity && $alignment_length && $gene_name && $match_strain) {print STDERR "Gene name is $gene_name match strain is $match_strain percent identity is $percent_identity and align len is $alignment_length\n"}
-		  
 		  if ( $percent_identity >= $MIN_NUCLEO_IDENTITY
 		       and  ($alignment_length/$length) >= $MIN_ALIGNMENT_RATIO  )
 		  {
