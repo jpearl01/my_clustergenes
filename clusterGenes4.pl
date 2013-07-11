@@ -16,7 +16,9 @@ use SequenceList;
 use Sequence;
 use Data::Dumper::Perltidy;
 
-
+# USAGE:
+print STDERR "USAGE: perl clusterGenes4.pl all_fasta_sequences tfasty_output fasta_output min_amino_iden min_nuc_iden align_ratio > clusters\n\n";
+die unless @ARGV;
 
 # This program has three inputs:
 # (1)  all_fasta_sequences:  a multi-fasta file containing the nucleotide sequences of ORFS from all strains
