@@ -2,15 +2,19 @@
 
 use strict;
 use warnings;
+#Currently have to change "genes.fna" to your current nucleotide gene annotations file (and location if you are running this anywhere but 
+#the directory which contains that file) "genes_vs_peptides.tfasty" to your tfasty alignment outputs, "dnaGenes_vs_allContigs.fasta" to 
+#your fasta contig/na alignment output.
+
 
 my $fastaSeqs	= 'genes.fna';
-my $tfasty		= 'genes_vs_peptides.tfasty';
+my $tfasty	= 'genes_vs_peptides.tfasty';
 my $allFasta	= 'dnaGenes_vs_allContigs.fasta';
 my $aa_iden 	= .5;
 my $nuc_iden	= .5;
-my $ratio		= .5;
-my $cg 			= 'clusterGenes';
-my $cr			= 'report_output';
+my $ratio	= .5;
+my $cg 		= 'clusterGenes';
+my $cr		= 'report_output';
 
 
 for my $i (0..5){
