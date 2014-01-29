@@ -14,7 +14,7 @@ use strict;
 use warnings;
 use SequenceList;
 use Sequence;
-use Data::Dumper::Perltidy;
+#use Data::Dumper::Perltidy;
 
 # USAGE:
 print STDERR "USAGE: perl clusterGenes4.pl all_fasta_sequences tfasty_output fasta_output min_amino_iden min_nuc_iden align_ratio > clusters\n\n";
